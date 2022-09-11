@@ -3,6 +3,7 @@ from crypt import methods
 from distutils.debug import DEBUG
 import json
 import os, time, sys
+from unicodedata import category
 import pandas as pd
 import numpy as np
 import yaml
@@ -50,16 +51,21 @@ df_all = df_market_idx.merge(df_hotcopper, how='left', on='ticker')
 
 df_table = df_all[['ticker', 'name', 'price', 'market_cap_mod', 'announcement', 'price_sensitive', 'date_time']] \
   .rename(columns={'market_cap_mod': 'market_cap', 'date_time': 'announcement_time'})
+df_table[['announcement', 'price_sensitive', 'announcement_time']] = df_table[['announcement', 'price_sensitive', 'announcement_time']].fillna(value='')
 
-# data_dict = dict()
-# for col in df_table.columns:
-#   data_dict[col] = df_table[col].values.tolist()
+df_table_dict = df_table.to_dict('records') # convert the pandas df into a list of dict
+df_table_dict_json = json.dumps(df_table_dict)  # convert the list of dict into a json object
 
 ### Route stuff ----
 # display table
 @app.route('/', methods=['GET'])
 def all_data():
-  return df_table.to_json(orient='records')
+  # return df_table.to_json(orient='records')
+  # return df_table_dict_json
+  return jsonify(
+    items=df_table_dict,
+    status=200
+  )
 
 
 if __name__ == '__main__':

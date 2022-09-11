@@ -1,27 +1,8 @@
 <template>
   <v-app>
-    <v-container fluid>
-      <v-row>
-        <v-col cols="3">
-          <v-row class="pa-6">
-            <v-text-field
-              v-mode="name"
-              append-icon="mdi-magnify"
-              type="text"
-              label="Name"
-            ></v-text-field>
-          </v-row>
-        </v-col>
-      </v-row>
-    </v-container>
     <v-data-table
       :headers="headers"
-      :items="announcements"
-      item-key="name"
-      :search="nameFilterValue"
-      :sort-by="['market_cap']"
-      :sort-desc="[true]"
-      multi-sort
+      :items="items"
       :items-per-page="10"
       class="elevation-1"
     ></v-data-table>
@@ -31,14 +12,11 @@
 
 <script>
 import axios from 'axios'
-import { ref } from "vue";
 
 export default {
-  name: 'DataTable',
-  
   data(){
     return {
-      headers:[
+      headers: [
         { text: "Ticker", value: 'ticker'},
         { text: "Name", value: 'name'},
         { text: "Price", value: 'price'},
@@ -47,19 +25,27 @@ export default {
         { text: "Price Sensitive", value: 'price_sensitive'},
         { text: "Announcement Time", value: 'announcement_time'},
       ],
-      announcements: ref([])
+      items: []
     }
   },
   created(){
     axios
       .get('http://localhost:1234/')
-      .then((response) => {
-        // JSON responses are automatically parsed.
-        this.announcements = response.data;
-      })
-      .catch((e) => {
-        this.errors.push(e);
-      });
+      .then(response => (
+        this.items = response.data.items,
+        console.log(response.data.items)
+      ))
+        // 
   },
+  // computed:{
+  //   filteredRows() {
+  //     return this.items.filter(item => {
+  //       const name = item.name.toLowerCase();
+  //       const searchTerm = this.filter.toLowerCase();
+
+  //       return name.includes(searchTerm)
+  //     });
+  //   }
+  // }
 }
 </script>
