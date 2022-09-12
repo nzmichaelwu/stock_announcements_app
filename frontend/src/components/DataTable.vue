@@ -1,8 +1,23 @@
 <template>
   <v-app>
+    <v-container fluid>
+      <v-row>
+        <v-col cols="3">
+          <v-row class="pa-6">
+            <v-text-field
+              v-model="search"
+              append-icon="mdi-magnify"
+              type="text"
+              label="Name"
+            ></v-text-field>
+          </v-row>
+        </v-col>
+      </v-row>
+    </v-container>
     <v-data-table
       :headers="headers"
       :items="items"
+      :search="search"
       :items-per-page="10"
       class="elevation-1"
     ></v-data-table>
@@ -16,6 +31,7 @@ import axios from 'axios'
 export default {
   data(){
     return {
+      search: '',
       headers: [
         { text: "Ticker", value: 'ticker'},
         { text: "Name", value: 'name'},
