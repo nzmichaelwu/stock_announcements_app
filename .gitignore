@@ -130,3 +130,6 @@ dmypy.json
 
 # other file type
 output/logs/
+*.csv
+frontend/README.md
+node_modules/
