@@ -8,7 +8,7 @@
               v-model="search"
               append-icon="mdi-magnify"
               type="text"
-              label="Name"
+              label="Search"
             ></v-text-field>
           </v-row>
         </v-col>
@@ -28,7 +28,36 @@
       :search="search"
       :items-per-page="10"
       class="elevation-1"
-    >
+    > 
+      <template v-slot:[`item.market_cap`]="{ item }">
+          {{ formatNumber(item.market_cap) }}
+      </template>
+      <template v-slot:[`header.market_cap`]="{ header }">
+        {{ header.text }}
+        <v-menu offset-y :close-on-content-click="false">
+          <template v-slot:activator="{ on, attrs }">
+            <v-btn icon v-bind="attrs" v-on="on">
+              <v-icon small :color="marketCapFilter ? 'primary' : ''">
+                mdi-filter
+              </v-icon>
+            </v-btn>
+          </template>
+          <div style="background-color: white; width: 280px">
+            <v-select
+              v-model="marketCapFilter"
+              label="Select"
+              :items="['0 to 1B', '1B to 20B', '20B+']"
+            ></v-select>
+            <v-btn
+              @click="marketCapFilter = ''"
+              small
+              text
+              color="primary"
+              class="ml-2 mb-2"
+            >Clean</v-btn>
+          </div>
+        </v-menu>
+      </template>
       <template v-slot:[`header.price_sensitive`]="{ header }">
         {{ header.text }}
         <v-menu offset-y :close-on-content-click="false">
@@ -57,8 +86,26 @@
       </template>
     </v-data-table>
     <v-container>
-      Value: {{startDate}}
+      Value: {{market_cap}}
     </v-container>
+    <!-- <v-container>
+      <v-col>
+          <v-row>
+            <v-btn
+              class="ma-2"
+              :loading="reload"
+              :disabled="reload"
+              color="success"
+              @click="loader = 'reload'"
+            >
+              Reload Data
+              <template v-slot:loader>
+                <span>Loading...</span>
+              </template>
+            </v-btn>
+          </v-row>
+        </v-col>
+    </v-container> -->
   </v-app>
 </template>
 
@@ -70,14 +117,16 @@ export default {
   data(){
     return {
       search: '',
+      marketCapFilter: null,
       priceSensitive: null,
       startDate: null,
       endDate: null,
+      reload: '',
       headers: [
         { text: "Ticker", value: 'ticker'},
         { text: "Name", value: 'name'},
         { text: "Price", value: 'price'},
-        { text: "Market Cap", value: 'market_cap'},
+        { text: "Market Cap", value:'market_cap'},
         { text: "Announcement", value: 'announcement'},
         { text: "Price Sensitive", value: 'price_sensitive'},
         { text: "Announcement Time", value: 'announcement_time'},
@@ -93,7 +142,6 @@ export default {
         this.announcements = this.full_data
         // console.log(response.data.items)
       ))
-        // 
   },
   computed: {
     filteredAnnouncements() {
@@ -102,6 +150,10 @@ export default {
 
       if (this.priceSensitive) {
         conditions.push(this.filterPriceSensitive);
+      }
+
+      if (this.marketCapFilter) {
+        conditions.push(this.filterMarketCap);
       }
 
       if (this.startDate || this.endDate) {
@@ -115,7 +167,7 @@ export default {
           })
         })
       }
-      console.log(this.announcements)
+      // console.log(this.announcements)
       return this.announcements
     }
   },
@@ -124,6 +176,14 @@ export default {
       if (!date) return date
       const date_mod = date.replace("T", " ")
       return date_mod
+    },
+    formatNumber(value){
+      var shortValue = new Intl.NumberFormat('en-GB', {
+        style: 'currency',
+        currency: 'AUD',
+        notation: 'compact',
+      }).format(value)
+      return shortValue
     },
     filterAnnouncementTime(item) {
       let startDate = this.formatDate(this.startDate);
@@ -144,6 +204,18 @@ export default {
     },
     filterPriceSensitive(item) {
       return item.price_sensitive == this.priceSensitive
+    },
+    filterMarketCap(item){
+      const market_cap_range = this.marketCapFilter
+      if (market_cap_range == '0 to 1B') {
+        return item.market_cap >= 0 && item.market_cap < 1000000000;
+      }
+      if (market_cap_range == '1B to 20B') {
+        return item.market_cap >= 1000000000 && item.market_cap < 20000000000;
+      }
+      if (market_cap_range == '20B+') {
+        return item.market_cap >= 20000000000
+      }
     }
   }
 }
