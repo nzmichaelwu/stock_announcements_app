@@ -42,7 +42,7 @@ def get_marketindex():
   cols = ['index', 'ticker', 'name', 'price', 'market_cap', 'extract_timestamp']
   d_list = postgresql_engine.execute("Select * from market_index").fetchall()
   df = pd.DataFrame(d_list, columns=cols)
-  df['market_cap'] = df['market_cap'].str.replace('$','')
+  df['market_cap'] = df['market_cap'].apply(lambda x: x.replace('$', ''))
   df[['market_cap_num', 'market_cap_unit']] = df['market_cap'].str.split(expand=True)
   for i, unit in enumerate(df['market_cap_unit']):
     if unit == 'B':
@@ -60,5 +60,3 @@ def get_marketindex():
   postgresql_engine.dispose()
 
   return df
-
-df_marketindex = get_marketindex()

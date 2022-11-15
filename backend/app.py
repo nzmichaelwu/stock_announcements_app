@@ -32,9 +32,10 @@ CORS(app)
 
 
 # load data
-def load_data():
+def load_announcements_data():
   # call get_hotcopper
   df_hotcopper = get_hotcopper()
+
   # call get_marketindex
   df_market_idx = get_marketindex()
 
@@ -46,23 +47,19 @@ def load_data():
   # add $ sign in front of the price
   df_table['price'] = df_table['price'].apply(lambda x: '$' + str(x))
 
-  # format market cap to be more human readable
-  # df_table['market_cap'] = df_table['market_cap'].apply(lambda x: '$' + hf.human_format(x))
-
   df_table[['announcement', 'price_sensitive', 'announcement_time']] = df_table[['announcement', 'price_sensitive', 'announcement_time']].fillna(value='')
 
   df_table_dict = df_table.to_dict('records') # convert the pandas df into a list of dict
-  # df_table_dict_json = json.dumps(df_table_dict)  # convert the list of dict into a json object
+  
   return df_table_dict
 
-data_original = load_data()
 
 ### Route stuff ----
-# display table at start
-@app.route('/', methods=['GET'])
+# display announcements table
+@app.route('/contents', methods=['GET'])
 def all_data():
   return jsonify(
-    items=data_original,
+    items=load_announcements_data(),
     status=200
   )
 

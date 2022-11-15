@@ -85,26 +85,8 @@
         </v-menu>
       </template>
     </v-data-table>
-    <v-container>
-      Value: {{market_cap}}
-    </v-container>
     <!-- <v-container>
-      <v-col>
-          <v-row>
-            <v-btn
-              class="ma-2"
-              :loading="reload"
-              :disabled="reload"
-              color="success"
-              @click="loader = 'reload'"
-            >
-              Reload Data
-              <template v-slot:loader>
-                <span>Loading...</span>
-              </template>
-            </v-btn>
-          </v-row>
-        </v-col>
+      Value: {{market_cap}}
     </v-container> -->
   </v-app>
 </template>
@@ -121,7 +103,6 @@ export default {
       priceSensitive: null,
       startDate: null,
       endDate: null,
-      reload: '',
       headers: [
         { text: "Ticker", value: 'ticker'},
         { text: "Name", value: 'name'},
@@ -136,7 +117,7 @@ export default {
   },
   created(){
     axios
-      .get('http://localhost:1234/')
+      .get('http://localhost:1234/contents')
       .then(response => (
         this.full_data = response.data.items,
         this.announcements = this.full_data
