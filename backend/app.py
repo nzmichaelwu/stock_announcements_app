@@ -1,17 +1,18 @@
 # import libraries
-from crypt import methods
-from distutils.debug import DEBUG
 import json
 import os, time, sys
-from unicodedata import category
 import pandas as pd
 import numpy as np
 import yaml
 import subprocess
-import datetime as dt
-from flask import Flask, jsonify
-from flask_cors import CORS
-from backend.database import get_hotcopper, get_marketindex
+from datetime import datetime
+
+from quart import Quart, jsonify
+from quart_cors import cors
+# from flask import Flask, jsonify
+# from flask_cors import CORS
+
+from backend.database import get_hotcopper, get_marketindex, get_afr, get_aus
 
 sys.path.append('..')
 from helper_funcs.helper_funcs import util as hf
@@ -24,14 +25,14 @@ cfg = hf.DotDict(yaml.safe_load(open('config.yml')))
 DEBUG = True
 
 # define app
-app = Flask(__name__)
-app.config.from_object(__name__)
+app = Quart(__name__)
+# app.config.from_object(__name__)
 
 # CORS(app, resources={r"/*":{'origins':"*"}})
-CORS(app)
+app = cors(app, allow_origin="*")
 
 
-# load data
+# load announcements data
 def load_announcements_data():
   # call get_hotcopper
   df_hotcopper = get_hotcopper()
@@ -50,19 +51,52 @@ def load_announcements_data():
   df_table[['announcement', 'price_sensitive', 'announcement_time']] = df_table[['announcement', 'price_sensitive', 'announcement_time']].fillna(value='')
 
   df_table_dict = df_table.to_dict('records') # convert the pandas df into a list of dict
-  
+
   return df_table_dict
+
+
+# load news data
+def load_news_data():
+  # call get_afr
+  df_afr_homepage, df_afr_street_talk = get_afr()
+
+  # call get_aus
+  df_aus_homepage, df_aus_dataroom, df_aus_tradingday = get_aus()
+
+  # combine the Aus section dfs
+  df_aus_sections = pd.concat([df_aus_dataroom, df_aus_tradingday], axis=0)
+
+  # create a dictionary to store all dfs in JSON
+  dfs_dict = {}
+  jsdf_afr_homepage = df_afr_homepage.to_json(orient='records')
+  jsdf_afr_street_talk = df_afr_street_talk.to_json(orient='records')
+  jsdf_aus_homepage = df_aus_homepage.to_json(orient='records')
+  jsdf_aus_sections = df_aus_sections.to_json(orient='records')
+
+  dfs_dict['afr_homepage'] = json.loads(jsdf_afr_homepage)
+  dfs_dict['afr_street_talk'] = json.loads(jsdf_afr_street_talk)
+  dfs_dict['aus_homepage'] = json.loads(jsdf_aus_homepage)
+  dfs_dict['aus_sections'] = json.loads(jsdf_aus_sections)
+
+  return dfs_dict
 
 
 ### Route stuff ----
 # display announcements table
 @app.route('/contents', methods=['GET'])
-def all_data():
+async def announcements_data():
   return jsonify(
     items=load_announcements_data(),
     status=200
   )
 
+# display news tables
+@app.route('/contents/news', methods=['GET'])
+async def news_data():
+  return jsonify(
+    items=load_news_data(),
+    status=200
+  )
 
 if __name__ == '__main__':
   app.run(host='0.0.0.0', port=1234)
