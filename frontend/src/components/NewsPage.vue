@@ -1,5 +1,10 @@
 <template>
   <v-app>
+    <div v-show="afr_homepage.length==0">
+      <div class="news-loading-box">
+        <grid-loader :loading="loading" :color="color" :size="size"></grid-loader>
+      </div>
+    </div>
     <v-row>
       <v-col cols="4">
         <v-container fluid>
@@ -21,6 +26,7 @@
             :items="afr_homepage"
             :search="afr_homepage_search"
             :items-per-page="5"
+            v-show="afr_homepage.length!=0"
           >
           </v-data-table>
         </v-container>
@@ -45,6 +51,7 @@
             :items="afr_street_talk"
             :search="afr_street_talk_search"
             :items-per-page="5"
+            v-show="afr_street_talk.length!=0"
           >
           </v-data-table>
         </v-container>
@@ -71,6 +78,7 @@
             :items="filteredAusHomepage"
             :search="aus_homepage_search"
             :items-per-page="5"
+            v-show="filteredAusHomepage.length!=0"
           >
           <template v-slot:[`header.category`]="{ header }">
               {{ header.text }}
@@ -121,6 +129,7 @@
             :items="aus_sections"
             :search="aus_sections_search"
             :items-per-page="5"
+            v-show="aus_sections.length!=0"
           >
           </v-data-table>
         </v-container>
@@ -131,6 +140,7 @@
 
 <script>
   import axios from 'axios'
+  import GridLoader from 'vue-spinner/src/GridLoader.vue'
 
   export default {
     data(){
@@ -164,7 +174,14 @@
           { text: "Extract Time", value: 'date_time'},
         ],
         aus_sections: [],
+        color: 'rgb(93, 197, 150)',
+        size: '45px',
+        margin: '2px',
+        radius: '2px'
       }
+    },
+    components: {
+      GridLoader
     },
     created(){
       axios
@@ -217,3 +234,16 @@
     }
   }
 </script>
+
+<style scoped>
+  .news-loading-box {
+    position: fixed;
+    top:40%;
+    left: 40%;
+    right: 40%;
+    width: 10%;
+    margin: auto;
+    /* background: #ffff; */
+    /* box-shadow: 0px 0px 9px -2px #000; */
+  }
+</style>

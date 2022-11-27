@@ -1,5 +1,10 @@
 <template>
   <v-app>
+    <div v-show="announcements.length==0">
+      <div class="announcement-loading-box">
+        <grid-loader :loading="loading" :color="color" :size="size"></grid-loader>
+      </div>
+    </div>
     <v-container fluid>
       <v-row>
         <v-col cols="3">
@@ -28,6 +33,7 @@
       :search="search"
       :items-per-page="10"
       class="elevation-1"
+      v-show="announcements.length!=0"
     > 
       <template v-slot:[`item.market_cap`]="{ item }">
           {{ formatNumber(item.market_cap) }}
@@ -94,6 +100,7 @@
 
 <script>
 import axios from 'axios'
+import GridLoader from 'vue-spinner/src/GridLoader.vue'
 
 export default {
   data(){
@@ -112,8 +119,15 @@ export default {
         { text: "Price Sensitive", value: 'price_sensitive'},
         { text: "Announcement Time", value: 'announcement_time'},
       ],
-      announcements: []
+      announcements: [],
+      color: 'rgb(93, 197, 150)',
+      size: '45px',
+      margin: '2px',
+      radius: '2px'
     }
+  },
+  components: {
+    GridLoader
   },
   created(){
     axios
@@ -201,3 +215,16 @@ export default {
   }
 }
 </script>
+
+<style scoped>
+  .announcement-loading-box {
+    position: fixed;
+    top:40%;
+    left: 40%;
+    right: 40%;
+    width: 10%;
+    margin: auto;
+    /* background: #ffff; */
+    /* box-shadow: 0px 0px 9px -2px #000; */
+  }
+</style>

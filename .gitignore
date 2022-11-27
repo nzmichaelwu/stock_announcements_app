@@ -133,3 +133,11 @@ output/logs/
 *.csv
 frontend/README.md
 node_modules/
+.DS_Store
+frontend/public/*
+frontend/src/components/icons/*
+package-lock.json
+package.json
+frontend/src/components/HelloWorld.vue
+frontend/src/components/TabTest.vue
+frontend/src/components/WelcomeItem.vue
