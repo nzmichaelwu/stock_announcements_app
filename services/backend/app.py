@@ -12,14 +12,7 @@ from quart_cors import cors
 # from flask import Flask, jsonify
 # from flask_cors import CORS
 
-from backend.database import get_hotcopper, get_marketindex, get_afr, get_aus
-
-sys.path.append('..')
-from helper_funcs.helper_funcs import util as hf
-
-
-cfg = hf.DotDict(yaml.safe_load(open('config.yml')))
-
+from services.backend.database import get_hotcopper, get_marketindex, get_afr, get_aus
 
 # configuration
 DEBUG = True

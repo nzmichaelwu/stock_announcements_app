@@ -18,7 +18,7 @@
           </v-row>
           <div>
             <h3>
-              AFR Headlines
+              AFR Homepage
             </h3>
           </div>
           <v-data-table
@@ -26,6 +26,8 @@
             :items="afr_homepage"
             :search="afr_homepage_search"
             :items-per-page="5"
+            :sort-by.sync="sortBy"
+            :sort-desc.sync="sortDesc"
             v-show="afr_homepage.length!=0"
           >
           </v-data-table>
@@ -51,6 +53,8 @@
             :items="afr_street_talk"
             :search="afr_street_talk_search"
             :items-per-page="5"
+            :sort-by.sync="sortBy"
+            :sort-desc.sync="sortDesc"
             v-show="afr_street_talk.length!=0"
           >
           </v-data-table>
@@ -78,6 +82,8 @@
             :items="filteredAusHomepage"
             :search="aus_homepage_search"
             :items-per-page="5"
+            :sort-by.sync="sortBy"
+            :sort-desc.sync="sortDesc"
             v-show="filteredAusHomepage.length!=0"
           >
           <template v-slot:[`header.category`]="{ header }">
@@ -129,6 +135,8 @@
             :items="aus_sections"
             :search="aus_sections_search"
             :items-per-page="5"
+            :sort-by.sync="sortBy"
+            :sort-desc.sync="sortDesc"
             v-show="aus_sections.length!=0"
           >
           </v-data-table>
@@ -177,7 +185,9 @@
         color: 'rgb(93, 197, 150)',
         size: '45px',
         margin: '2px',
-        radius: '2px'
+        radius: '2px',
+        sortBy: 'date_time',
+        sortDesc: true, 
       }
     },
     components: {

@@ -129,15 +129,13 @@ dmypy.json
 .pyre/
 
 # other file type
-output/logs/
+services/frontend/.vscode
 *.csv
-frontend/README.md
+services/frontend/ui/README.md
 node_modules/
 .DS_Store
-frontend/public/*
-frontend/src/components/icons/*
-package-lock.json
-package.json
-frontend/src/components/HelloWorld.vue
-frontend/src/components/TabTest.vue
-frontend/src/components/WelcomeItem.vue
+services/frontend/ui/public
+services/frontend/ui/src/components/icons/*
+services/frontend/ui/src/components/HelloWorld.vue
+services/frontend/ui/src/components/TabTest.vue
+services/frontend/ui/src/components/WelcomeItem.vue
