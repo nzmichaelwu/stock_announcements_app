@@ -12,7 +12,7 @@ from quart_cors import cors
 # from flask import Flask, jsonify
 # from flask_cors import CORS
 
-from services.backend.database import get_hotcopper, get_marketindex, get_afr, get_aus
+from database import get_hotcopper, get_marketindex, get_afr, get_aus
 
 # configuration
 DEBUG = True

@@ -7,11 +7,11 @@ import sys, os
 import subprocess
 from pyparsing import col
 import yaml
-from services.backend.src.util import DotDict
+from src.util import DotDict
 
 from sqlalchemy import column, create_engine
 
-cfg = DotDict(yaml.safe_load(open('services/backend/config_db.yml')))
+cfg = DotDict(yaml.safe_load(open('config_db.yml')))
 
 
 # function to get data from hotcopper table
