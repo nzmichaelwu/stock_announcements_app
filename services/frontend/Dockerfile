@@ -5,7 +5,7 @@ FROM node:18.13-alpine3.17
 WORKDIR /app
 
 # add `/app/node_modules/.bin` to $PATH
-ENV PATH /app/node_modules/.bin:$PATH
+# ENV PATH /app/node_modules/.bin:$PATH
 
 # install app and project dependencies
 COPY ./ui/package.json /app/package.json
