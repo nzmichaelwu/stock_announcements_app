@@ -131,7 +131,7 @@ export default {
   },
   created(){
     axios
-      .get('http://localhost:1234/contents')
+      .get('http://0.0.0.0:1234/contents')
       .then(response => (
         this.full_data = response.data.items,
         this.announcements = this.full_data

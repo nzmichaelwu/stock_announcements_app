@@ -7,7 +7,7 @@ WORKDIR /app
 # add `/app/node_modules/.bin` to $PATH
 ENV PATH /app/node_modules/.bin:$PATH
 
-# install app dependencies
+# install app and project dependencies
 COPY ./ui/package.json /app/package.json
 COPY ./ui/package-lock.json /app/package-lock.json
 RUN npm install
