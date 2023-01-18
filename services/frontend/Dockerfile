@@ -14,11 +14,11 @@ COPY ./ui/package-lock.json /app/package-lock.json
 RUN npm install
 RUN npm install -g @vue/cli@latest
 
-# fixing node_modules permission error
-# source: https://stackoverflow.com/questions/67087735/eacces-permission-denied-mkdir-usr-app-node-modules-cache-how-can-i-creat
-RUN mkdir -p node_modules/.cache && chmod -R 777 node_modules/.cache
-
 # copy files
 COPY ./ui /app
+
+# fixing node_modules permission error
+# source: https://stackoverflow.com/questions/67087735/eacces-permission-denied-mkdir-usr-app-node-modules-cache-how-can-i-creat
+RUN mkdir -p /app/node_modules/.cache && chmod -R 777 /app/node_modules/.cache
 
 CMD npm run serve
