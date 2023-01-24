@@ -195,7 +195,7 @@
     },
     created(){
       axios
-        .get('http://0.0.0.0:1234/contents/news')
+        .get('/contents/news')
         .then(response => (
           this.afr_homepage_data = response.data.items.afr_homepage,
           this.afr_homepage = this.afr_homepage_data,

@@ -59,5 +59,9 @@ COPY . /usr/src/backend
 
 # ENTRYPOINT ["/usr/src/backend/entrypoint.sh"]
 
+EXPOSE 1234
+
+CMD ["hypercorn", "app", "--bind", "[::]:1234"]
+
 # Run app
 # CMD ["python", "/usr/src/backend/app.py"]
