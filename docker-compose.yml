@@ -1,14 +1,13 @@
 version: '3.7'
 
 services:
-
   backend:
     build:
-      context: ./services/backend
+      context: ./backend
       dockerfile: Dockerfile
     container_name: backend
     volumes:
-      - ./services/backend:/usr/src/backend
+      - ./backend:/usr/src/backend
     ports:
       - 1234:1234
     environment:
@@ -16,18 +15,18 @@ services:
 
   # frontend:
   #   build:
-  #     context: ./services/frontend
+  #     context: ./frontend
   #     dockerfile: Dockerfile
   #   volumes:
-  #     - './services/frontend/ui:/app'
+  #     - './frontend/ui:/app'
   #     - '/app/node_modules'
   #   ports:
   #     - 8080:8080
   
   nginx:
     build:
-      context: ./services/nginx
-      dockerfile: Dockerfile
+      context: ./
+      dockerfile: ./nginx/Dockerfile
     container_name: web_server
     ports:
       - 8080:8080
