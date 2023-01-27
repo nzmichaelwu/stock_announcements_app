@@ -61,7 +61,7 @@ COPY . /usr/src/backend
 
 EXPOSE 1234
 
-CMD ["hypercorn", "app", "--bind", "[::]:1234"]
+CMD ["gunicorn", "app", "--bind", "0.0.0.0:1234", "--workers=4", "--timeout 240"]
 
 # Run app
 # CMD ["python", "/usr/src/backend/app.py"]

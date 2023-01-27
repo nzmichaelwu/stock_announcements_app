@@ -99,7 +99,7 @@
 
 
 <script>
-import axios from 'axios'
+import axios from '../axios/axios'
 import GridLoader from 'vue-spinner/src/GridLoader.vue'
 
 export default {
@@ -131,7 +131,7 @@ export default {
   },
   created(){
     axios
-      .get('/contents')
+      .get('/api/contents')
       .then(response => (
         this.full_data = response.data.items,
         this.announcements = this.full_data
