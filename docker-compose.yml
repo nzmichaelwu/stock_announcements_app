@@ -12,6 +12,8 @@ services:
       - 1234:1234
     environment:
       - DATABASE_URL=postgresql://root:Allblackscup_01@stock-rds-db.ck01jddttrnr.ap-southeast-2.rds.amazonaws.com:5432/stock_announcement_db
+    networks:
+      - mynet
 
   # frontend:
   #   build:
@@ -22,7 +24,7 @@ services:
   #     - '/app/node_modules'
   #   ports:
   #     - 8080:8080
-  
+
   nginx:
     build:
       context: ./
@@ -32,3 +34,10 @@ services:
       - 80:80
     depends_on:
       - backend
+    networks:
+      - mynet
+
+networks:
+  mynet:
+    driver: bridge
+
