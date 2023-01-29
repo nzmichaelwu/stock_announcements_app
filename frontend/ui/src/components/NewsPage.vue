@@ -147,7 +147,7 @@
 </template>
 
 <script>
-  import axios from 'axios'
+  import axios from '../axios/axios'
   import GridLoader from 'vue-spinner/src/GridLoader.vue'
 
   export default {
@@ -195,7 +195,7 @@
     },
     created(){
       axios
-        .get('http://0.0.0.0:1234/contents/news')
+        .get('/api/contents/news')
         .then(response => (
           this.afr_homepage_data = response.data.items.afr_homepage,
           this.afr_homepage = this.afr_homepage_data,

@@ -59,5 +59,9 @@ COPY . /usr/src/backend
 
 # ENTRYPOINT ["/usr/src/backend/entrypoint.sh"]
 
+EXPOSE 1234
+
+CMD ["gunicorn", "app:app", "--bind", "0.0.0.0:1234", "--workers=4", "--timeout=240"]
+
 # Run app
 # CMD ["python", "/usr/src/backend/app.py"]

@@ -7,10 +7,10 @@ import yaml
 import subprocess
 from datetime import datetime
 
-from quart import Quart, jsonify
-from quart_cors import cors
-# from flask import Flask, jsonify
-# from flask_cors import CORS
+# from quart import Quart, jsonify
+# from quart_cors import cors
+from flask import Flask, jsonify
+from flask_cors import CORS
 
 from database import get_hotcopper, get_marketindex, get_afr, get_aus
 
@@ -18,11 +18,11 @@ from database import get_hotcopper, get_marketindex, get_afr, get_aus
 DEBUG = True
 
 # define app
-app = Quart(__name__)
+app = Flask(__name__)
 # app.config.from_object(__name__)
 
-# CORS(app, resources={r"/*":{'origins':"*"}})
-app = cors(app, allow_origin="*")
+CORS(app, resources={r"/*":{'origins':"*"}})
+# app = cors(app, allow_origin="*")
 
 
 # load announcements data
@@ -76,7 +76,7 @@ def load_news_data():
 
 ### Route stuff ----
 # display announcements table
-@app.route('/contents', methods=['GET'])
+@app.route('/api/contents', methods=['GET'])
 async def announcements_data():
   return jsonify(
     items=load_announcements_data(),
@@ -84,7 +84,7 @@ async def announcements_data():
   )
 
 # display news tables
-@app.route('/contents/news', methods=['GET'])
+@app.route('/api/contents/news', methods=['GET'])
 async def news_data():
   return jsonify(
     items=load_news_data(),
@@ -92,4 +92,4 @@ async def news_data():
   )
 
 if __name__ == '__main__':
-  app.run(host='0.0.0.0', port=1234)
+    app.run(port=1234)
