@@ -10,8 +10,6 @@ services:
       - ./backend:/usr/src/backend
     ports:
       - 1234:1234
-    environment:
-      - DATABASE_URL=postgresql://root:Allblackscup_01@stock-rds-db.ck01jddttrnr.ap-southeast-2.rds.amazonaws.com:5432/stock_announcement_db
     networks:
       - mynet
 
@@ -32,6 +30,8 @@ services:
     container_name: web_server
     ports:
       - 80:80
+    environment:
+      - API_URL=backend:1234
     depends_on:
       - backend
     networks:
