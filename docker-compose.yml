@@ -30,8 +30,8 @@ services:
     container_name: web_server
     ports:
       - 80:80
-    environment:
-      - API_URL=backend:1234
+    # environment:
+    #   - API_URL=backend:1234
     depends_on:
       - backend
     networks:
