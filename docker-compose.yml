@@ -10,20 +10,8 @@ services:
       - ./backend:/usr/src/backend
     ports:
       - 1234:1234
-    environment:
-      - DATABASE_URL=postgresql://root:Allblackscup_01@stock-rds-db.ck01jddttrnr.ap-southeast-2.rds.amazonaws.com:5432/stock_announcement_db
     networks:
       - mynet
-
-  # frontend:
-  #   build:
-  #     context: ./frontend
-  #     dockerfile: Dockerfile
-  #   volumes:
-  #     - './frontend/ui:/app'
-  #     - '/app/node_modules'
-  #   ports:
-  #     - 8080:8080
 
   nginx:
     build:
