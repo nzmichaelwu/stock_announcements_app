@@ -13,16 +13,6 @@ services:
     networks:
       - mynet
 
-  # frontend:
-  #   build:
-  #     context: ./frontend
-  #     dockerfile: Dockerfile
-  #   volumes:
-  #     - './frontend/ui:/app'
-  #     - '/app/node_modules'
-  #   ports:
-  #     - 8080:8080
-
   nginx:
     build:
       context: ./
@@ -30,8 +20,6 @@ services:
     container_name: web_server
     ports:
       - 80:80
-    # environment:
-    #   - API_URL=backend:1234
     depends_on:
       - backend
     networks:
