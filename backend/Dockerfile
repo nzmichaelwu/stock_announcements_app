@@ -7,6 +7,7 @@ RUN apt-get update && apt-get install -y \
   apache2-utils \
   curl \
   expect \
+  gcc \
   gdebi-core \
   gnupg \
   gnupg1 \
@@ -60,6 +61,9 @@ COPY . /usr/src/backend
 # ENTRYPOINT ["/usr/src/backend/entrypoint.sh"]
 
 EXPOSE 1234
+
+# Create a folder called log for backend
+RUN mkdir -p /var/log/backend
 
 CMD ["gunicorn", "app:app", "--bind", "0.0.0.0:1234", "--workers=4", "--timeout=240"]
 
