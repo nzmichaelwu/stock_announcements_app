@@ -247,4 +247,4 @@ def human_format(num):
 
 
 def get_mem():
-    return psutil.Process(os.getpid()).memory_infor().rss / 1024**2
+    return psutil.Process(os.getpid()).memory_info().rss / 1024**2
