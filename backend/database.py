@@ -1,5 +1,6 @@
 # import libraries
 import os
+import re
 import subprocess
 import sys
 from datetime import date, datetime
@@ -78,6 +79,9 @@ def get_marketindex():
     d_list = postgresql_engine.execute("Select * from market_index").fetchall()
     df = pd.DataFrame(d_list, columns=cols)
     df["market_cap"] = df["market_cap"].apply(lambda x: x.replace("$", ""))
+    df["market_cap"] = df["market_cap"].apply(
+        lambda x: re.sub("(\d+(\.\d+)?)", r" \1 ", x)
+    )
     df[["market_cap_num", "market_cap_unit"]] = df["market_cap"].str.split(expand=True)
     for i, unit in enumerate(df["market_cap_unit"]):
         if unit == "B":
