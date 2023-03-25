@@ -139,3 +139,4 @@ node_modules/
 ./frontend/ui/src/components/HelloWorld.vue
 ./frontend/ui/src/components/TabTest.vue
 ./frontend/ui/src/components/WelcomeItem.vue
+*.crt

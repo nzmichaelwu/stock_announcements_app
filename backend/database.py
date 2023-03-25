@@ -32,6 +32,7 @@ def get_hotcopper():
         + str(cfg.db.port)
         + "/"
         + cfg.db.name
+        + "?sslmode=require"
     )
     postgresql_engine = create_engine(DATABASE_URL)
 
@@ -71,6 +72,7 @@ def get_marketindex():
         + str(cfg.db.port)
         + "/"
         + cfg.db.name
+        + "?sslmode=require"
     )
     postgresql_engine = create_engine(DATABASE_URL)
 
@@ -118,6 +120,7 @@ def get_afr():
         + str(cfg.db.port)
         + "/"
         + cfg.db.name
+        + "?sslmode=require"
     )
     postgresql_engine = create_engine(DATABASE_URL)
 
@@ -167,6 +170,7 @@ def get_aus():
         + str(cfg.db.port)
         + "/"
         + cfg.db.name
+        + "?sslmode=require"
     )
     postgresql_engine = create_engine(DATABASE_URL)
 
