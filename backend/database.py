@@ -198,7 +198,7 @@ def get_aus():
 
     df_aus_homepage = get_news(
         query_aus_homepage, postgresql_engine, "index", "extract_ts", ["heading"]
-    )
+    ).rename({"heading": "headline"})
 
     df_aus_dataroom = get_news(
         query_aus_dataroom,
@@ -206,7 +206,7 @@ def get_aus():
         "index",
         "extract_ts",
         ["heading", "summary"],
-    )
+    ).rename({"heading": "headline"})
 
     df_aus_tradingday = get_news(
         query_aus_tradingday,
@@ -214,7 +214,7 @@ def get_aus():
         "index",
         "extract_ts",
         ["heading", "summary"],
-    )
+    ).rename({"heading": "headline"})
 
     postgresql_engine.dispose()
 
