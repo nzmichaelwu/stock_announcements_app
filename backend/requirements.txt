@@ -17,3 +17,5 @@ Flask-Cors==3.0.10
 pyparsing==3.0.9
 Flask-Caching==2.0.2
 psutil==5.9.4
+polars==0.16.16
+pyarrow==11.0.0

@@ -8,12 +8,10 @@ from datetime import datetime
 
 import numpy as np
 import pandas as pd
+import polars as pl
 import yaml
 from database import get_afr, get_aus, get_hotcopper, get_marketindex
 from extensions import TIMEOUT, cache, logger
-
-# from quart import Quart, jsonify
-# from quart_cors import cors
 from flask import Flask, jsonify
 from flask_cors import CORS
 from src.util import get_mem
@@ -25,15 +23,13 @@ logger.debug("starting the app")
 
 # define app
 app = Flask(__name__)
-# app.config.from_object(__name__)
 
 CORS(app, resources={r"/*": {"origins": "*"}})
-# app = cors(app, allow_origin="*")
 
 
 # load announcements data
 def load_announcements_data():
-    logger.debug(f"Loading announcement data...")
+    logger.info(f"Loading announcement data...")
     start_time = time.time()
 
     # call get_hotcopper
@@ -43,34 +39,34 @@ def load_announcements_data():
     df_market_idx = get_marketindex()
 
     # combine into a big df
-    df_all = df_market_idx.merge(df_hotcopper, how="left", on="ticker")
-    df_table = df_all[
-        [
+    df_table = (
+        df_market_idx.join(df_hotcopper, on="ticker", how="left")
+        .select(
             "ticker",
             "name",
-            "price",
+            "$" + pl.col("price").cast(pl.Utf8),
             "market_cap_mod",
-            "announcement",
-            "price_sensitive",
-            "date_time",
-        ]
-    ].rename(columns={"market_cap_mod": "market_cap", "date_time": "announcement_time"})
+            pl.col("announcement").fill_null(""),
+            pl.col("price_sensitive").fill_null(""),
+            pl.col("date_time").fill_null(""),
+        )
+        .rename(
+            {
+                "literal": "price",
+                "market_cap_mod": "market_cap",
+                "date_time": "announcement_time",
+            }
+        )
+    )
 
-    # add $ sign in front of the price
-    df_table["price"] = df_table["price"].apply(lambda x: "$" + str(x))
-
-    df_table[["announcement", "price_sensitive", "announcement_time"]] = df_table[
-        ["announcement", "price_sensitive", "announcement_time"]
-    ].fillna(value="")
-
-    df_table_dict = df_table.to_dict(
+    df_table_dict = df_table.to_pandas().to_dict(
         "records"
     )  # convert the pandas df into a list of dict
 
     end_time = time.time()
 
     if len(df_table_dict) != 0:
-        logger.debug(
+        logger.info(
             f"Loaded announcement data... time taken: {end_time - start_time} seconds, memory being used: {get_mem()}"
         )
     else:
@@ -91,14 +87,14 @@ def load_news_data():
     df_aus_homepage, df_aus_dataroom, df_aus_tradingday = get_aus()
 
     # combine the Aus section dfs
-    df_aus_sections = pd.concat([df_aus_dataroom, df_aus_tradingday], axis=0)
+    df_aus_sections = pl.concat([df_aus_dataroom, df_aus_tradingday])
 
     # create a dictionary to store all dfs in JSON
     dfs_dict = {}
-    jsdf_afr_homepage = df_afr_homepage.to_json(orient="records")
-    jsdf_afr_street_talk = df_afr_street_talk.to_json(orient="records")
-    jsdf_aus_homepage = df_aus_homepage.to_json(orient="records")
-    jsdf_aus_sections = df_aus_sections.to_json(orient="records")
+    jsdf_afr_homepage = df_afr_homepage.to_pandas().to_json(orient="records")
+    jsdf_afr_street_talk = df_afr_street_talk.to_pandas().to_json(orient="records")
+    jsdf_aus_homepage = df_aus_homepage.to_pandas().to_json(orient="records")
+    jsdf_aus_sections = df_aus_sections.to_pandas().to_json(orient="records")
 
     dfs_dict["afr_homepage"] = json.loads(jsdf_afr_homepage)
     dfs_dict["afr_street_talk"] = json.loads(jsdf_afr_street_talk)
@@ -108,7 +104,7 @@ def load_news_data():
     end_time = time.time()
 
     if len(dfs_dict) != 0:
-        logger.debug(
+        logger.info(
             f"Loaded news data... time taken: {end_time - start_time} seconds, memory being used: {get_mem()}"
         )
     else:
