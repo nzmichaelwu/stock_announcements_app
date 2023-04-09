@@ -1,3 +1,6 @@
+out:
+  LOGS: logs
+
 db:
   user: doadmin
   password: AVNS_93AZAKgiJVU7aJEccYd

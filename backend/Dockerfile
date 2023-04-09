@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 
-FROM python:3.7-slim-buster
+FROM python:3.7
 
 # Install system libraries
 RUN apt-get update && apt-get install -y \
@@ -48,6 +48,7 @@ RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 WORKDIR /usr/src/backend
 
 # add and install requirements
+RUN pip install pystan==2.19.1.1
 COPY ./requirements.txt /usr/src/backend/requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
 
@@ -63,7 +64,7 @@ COPY . /usr/src/backend
 EXPOSE 1234
 
 # Create a folder called log for backend
-RUN mkdir -p /var/log/backend
+RUN mkdir -p /usr/src/backend/logs
 
 CMD ["gunicorn", "app:app", "--bind", "0.0.0.0:1234", "--workers=4", "--timeout=240"]
 

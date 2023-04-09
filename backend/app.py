@@ -1,25 +1,39 @@
 # import libraries
 import json
-import os
-import subprocess
-import sys
+import logging
 import time
-from datetime import datetime
+from datetime import datetime as dt
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
 import polars as pl
 import yaml
+from box import Box
 from database import get_afr, get_aus, get_hotcopper, get_marketindex
-from extensions import TIMEOUT, cache, logger
 from flask import Flask, jsonify
 from flask_cors import CORS
-from src.util import get_mem
+from utils.logging import set_up_logging
+from utils.util import get_mem
+
+cfg = Box(yaml.safe_load(open("config_db.yml")))
+
+### set up logging and other params ----
+logger = logging.getLogger()
+LOG_DIR = Path(f"{cfg.out.LOGS}")
+LOG_DIR.mkdir(parents=True, exist_ok=True)
+
+RUN_Date = dt.today().strftime("%Y%m%d")
+
+log_dir_exp = LOG_DIR / f"app_logs_{RUN_Date}"
+log_dir_exp.mkdir(parents=True, exist_ok=True)
+set_up_logging(logger, log_dir_exp / "logs.txt")  # appends to file by default if exists
+
 
 # configuration
 DEBUG = True
 
-logger.debug("starting the app")
+logger.info("starting the app")
 
 # define app
 app = Flask(__name__)
