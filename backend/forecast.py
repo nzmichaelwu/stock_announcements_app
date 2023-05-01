@@ -1,4 +1,5 @@
 # Import libraries
+import itertools
 import math
 import os
 import random
@@ -12,9 +13,11 @@ import numpy as np
 import pandas as pd
 import polars as pl
 import regex as re
+import seaborn as sns
 import yaml
 import yfinance as yf
-from fbprophet import Prophet
+from prophet import Prophet
+from prophet.diagnostics import cross_validation, performance_metrics
 from sklearn.metrics import mean_absolute_error, mean_squared_error
 from sklearn.model_selection import ParameterGrid
 
@@ -33,7 +36,7 @@ def get_stock_price(ticker, startdate, enddate) -> pd.DataFrame:
 
 # create a AUS Holiday dataframe
 start = date(2013, 1, 1)
-end = date(2023, 1, 1)
+end = date(2030, 1, 1)
 
 year_range = [year for year in range(start.year, end.year + 1)]
 
@@ -52,9 +55,6 @@ df.drop(
     ["Open", "High", "Low", "Volume", "Dividends", "Stock Splits"], axis=1, inplace=True
 )
 
-plt.plot(df["Date"], df["Close"])
-plt.show()
-
 # Change all column headings to be lower case, and remove spacing
 df.columns = [str(x).lower().replace(" ", "_") for x in df.columns]
 
@@ -62,6 +62,12 @@ df.columns = [str(x).lower().replace(" ", "_") for x in df.columns]
 # prepare expected column names
 df.columns = ["ds", "y"]
 df["ds"] = pd.to_datetime(df["ds"])
+
+# Visualize data using seaborn
+sns.set(rc={"figure.figsize": (12, 8)})
+sns.lineplot(x=df["ds"], y=df["y"])
+plt.legend(["TLS"])
+plt.show()
 
 
 # Split data into train and test (80% vs 20%)
@@ -71,147 +77,100 @@ test_split_idx = int(df.shape[0] * (1 - test_size))
 df_train = df.loc[:test_split_idx].copy()
 df_test = df.loc[test_split_idx + 1 :].copy()
 
-# define the model
-model = Prophet()
-# fit the model
-model.fit(df_train)
+# Initiate the model
+baseline_model = Prophet()  # Fit the model on the training dataset
 
-# define the period for which we want a prediction - in sample
-future_in_sample = df_train[["ds"]].tail(90).reset_index(drop=True)
+baseline_model.fit(df_train)
 
-# use the model to make a forecast
-forecast_in_sample = model.predict(future_in_sample)
-# summarize the forecast
-print(forecast_in_sample[["ds", "yhat", "yhat_lower", "yhat_upper"]].head())
-# plot forecast
-model.plot(forecast_in_sample)
-plt.show()
+# Cross validation
+baseline_model_cv = cross_validation(
+    model=baseline_model,
+    initial="200 days",
+    period="30 days",
+    horizon="30 days",
+    parallel="processes",
+)
+baseline_model_cv.head()
 
+# Model performance metrics
+baseline_model_p = performance_metrics(baseline_model_cv, rolling_window=1)
+baseline_model_p.head()
 
-# Evaludate the model on the last 90 samples
-predictions = forecast_in_sample["yhat"]
-actuals = df_train.tail(90)["y"].reset_index(drop=True)
+# Get the performance metric value
+baseline_model_p["mae"].values[0]
+baseline_model_p["rmse"].values[0]
 
-print(f"RMSE: {mean_squared_error(actuals, predictions)}")
-print(f"MAE: {mean_absolute_error(actuals, predictions)}")
+# Evaluation on test set using the baseline_model
+df_pred_baseline = baseline_model.predict(df_test)
+yhat_baseline = df_pred_baseline["yhat"]
+actuals = df_test["y"]
+print(f"MAE on test set: {mean_absolute_error(actuals, yhat_baseline)}")
+print(f"RMSE on test set: {mean_squared_error(actuals, yhat_baseline, squared=False)}")
 
-# Forecast on test set
-future_test = df_test[["ds"]].reset_index(drop=True)
-forecast_test = model.predict(future_test)
-
-# summarize the forecast
-print(forecast_test[["ds", "yhat", "yhat_lower", "yhat_upper"]].head())
-# plot forecast
-model.plot(forecast_test)
-plt.show()
-
-# Evaluate on test set
-pred_test = forecast_test["yhat"]
-print(f"RMSE: {mean_squared_error(df_test['y'].reset_index(drop=True), pred_test)}")
-print(f"MAE: {mean_absolute_error(df_test['y'].reset_index(drop=True), pred_test)}")
-
-
-### Hyperparameter tuning with ParameterGrid
-params_grid = {
-    "seasonality_mode": ("multiplicative", "additive"),
-    "changepoint_prior_scale": [0.1, 0.2, 0.3, 0.4, 0.5],
-    "holidays_prior_scale": [0.1, 0.2, 0.3, 0.4, 0.5],
-    "n_changepoints": [100, 150, 200],
+# Hyperparameter tuning
+# Set up parameter grid
+param_grid = {
+    "changepoint_prior_scale": [0.001, 0.05, 0.08, 0.5],
+    "seasonality_prior_scale": [0.01, 1, 5, 10, 12],
+    "seasonality_mode": ["additive", "multiplicative"],
 }
-grid = ParameterGrid(params_grid)
-cnt = 0
-for p in grid:
-    cnt = cnt + 1
 
-print("Total Possible Models", cnt)
+# Generate all combinations of parameters
+all_params = [
+    dict(zip(param_grid.keys(), v)) for v in itertools.product(*param_grid.values())
+]
 
-model_parameters = pd.DataFrame(columns=["RMSE", "MAE", "Parameters"])
-for p in grid:
-    test = pd.DataFrame()
-    print(p)
-    random.seed(1234)
-    train_model = Prophet(
-        changepoint_prior_scale=p["changepoint_prior_scale"],
-        holidays_prior_scale=p["holidays_prior_scale"],
-        n_changepoints=p["n_changepoints"],
-        seasonality_mode=p["seasonality_mode"],
-        weekly_seasonality=True,
-        daily_seasonality=True,
-        yearly_seasonality=True,
-        holidays=holiday,
-        interval_width=0.95,
-    )
-    train_model.add_country_holidays(country_name="AU")
-    train_model.fit(df_train)
-    train_forecast = df_train[["ds"]].tail(90).reset_index(drop=True)
-    train_forecast = train_model.predict(train_forecast)
-    train_pred = train_forecast["yhat"]
-    train_actuals = df_train.tail(90)["y"].reset_index(drop=True)
+# Create a list to store MAPE values for each combination
+maes = []
 
-    RMSE = mean_squared_error(actuals, predictions)
-    MAE = mean_absolute_error(actuals, predictions)
+# Use cross validation to evaluate all parameters
+for params in all_params:
+    # Fit a model using one parameter combination
+    m = Prophet(**params).fit(df_train)
 
-    print(
-        f"Root Mean Square Error (RMSE)------------------------------------ {RMSE}",
-    )
-    print(
-        f"Mean Absolute Error (MAE)------------------------------------ {MAE}",
-    )
-    model_parameters = model_parameters.append(
-        {"RMSE": RMSE, "MAE": MAE, "Parameters": p}, ignore_index=True
+    # Cross-validation
+    df_cv = cross_validation(
+        m, initial="200 days", period="30 days", horizon="30 days", parallel="processes"
     )
 
-parameters = model_parameters.sort_values(by=["RMSE"])
-parameters = parameters.reset_index(drop=True)
-parameters["Parameters"][0]
+    # Model performance
+    df_p = performance_metrics(df_cv, rolling_window=1)
 
-# tuned model
-tuned_model = Prophet(
-    holidays=holiday,
-    changepoint_prior_scale=0.1,
-    holidays_prior_scale=0.1,
-    n_changepoints=100,
-    seasonality_mode="multiplicative",
-    weekly_seasonality=True,
-    daily_seasonality=True,
-    yearly_seasonality=True,
-    interval_width=0.95,
+    # Save model performance metrics
+    maes.append(df_p["mae"].values[0])
+
+# Tuning results
+tuning_results = pd.DataFrame(all_params)
+tuning_results["mae"] = maes  # Find the best parameters
+best_params = all_params[np.argmin(maes)]
+print(best_params)
+
+# Fit the model using the best parameters
+auto_model = Prophet(
+    changepoint_prior_scale=best_params["changepoint_prior_scale"],
+    seasonality_prior_scale=best_params["seasonality_prior_scale"],
+    seasonality_mode=best_params["seasonality_mode"],
 )
-tuned_model.add_country_holidays(country_name="AU")
 
-tuned_model.fit(df_train)
+# Fit the model on the training dataset
+auto_model.fit(df_train)
 
-# use the tuned model to make a forecast
-forecast_in_sample_tuned = tuned_model.predict(future_in_sample)
-# summarize the forecast
-print(forecast_in_sample_tuned[["ds", "yhat", "yhat_lower", "yhat_upper"]].head())
-# plot forecast
-tuned_model.plot(forecast_in_sample_tuned)
-plt.show()
-
-
-# Evaludate the model on the last 90 samples
-predictions_tuned = forecast_in_sample_tuned["yhat"]
-actuals = df_train.tail(90)["y"].reset_index(drop=True)
-
-print(f"RMSE: {mean_squared_error(actuals, predictions_tuned)}")
-print(f"MAE: {mean_absolute_error(actuals, predictions_tuned)}")
-
-
-# Forecast on test set
-forecast_test_tuned = tuned_model.predict(future_test)
-
-# summarize the forecast
-print(forecast_test_tuned[["ds", "yhat", "yhat_lower", "yhat_upper"]].head())
-# plot forecast
-model.plot(forecast_test_tuned)
-plt.show()
-
-# Evaluate on test set
-pred_test_tuned = forecast_test_tuned["yhat"]
-print(
-    f"RMSE: {mean_squared_error(df_test['y'].reset_index(drop=True), pred_test_tuned)}"
+# Cross validation
+auto_model_cv = cross_validation(
+    auto_model,
+    initial="200 days",
+    period="30 days",
+    horizon="30 days",
+    parallel="processes",
 )
-print(
-    f"MAE: {mean_absolute_error(df_test['y'].reset_index(drop=True), pred_test_tuned)}"
-)
+
+# Model performance metrics
+auto_model_p = performance_metrics(auto_model_cv, rolling_window=1)
+auto_model_p["mae"].values[0]
+auto_model_p["rmse"].values[0]
+
+# Evaluation on test set using the tuned_model
+df_pred_tuned = auto_model.predict(df_test)
+yhat_tuned = df_pred_tuned["yhat"]
+print(f"MAE on test set: {mean_absolute_error(actuals, yhat_tuned)}")
+print(f"RMSE on test set: {mean_squared_error(actuals, yhat_tuned, squared=False)}")
