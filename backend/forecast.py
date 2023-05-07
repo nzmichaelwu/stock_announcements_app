@@ -15,6 +15,7 @@ import regex as re
 import seaborn as sns
 import yaml
 import yfinance as yf
+from dateutil.relativedelta import relativedelta
 from prophet import Prophet
 from prophet.diagnostics import cross_validation, performance_metrics
 from sklearn.metrics import mean_absolute_error, mean_squared_error
@@ -22,7 +23,9 @@ from sklearn.model_selection import ParameterGrid
 
 # variables
 prev_date = date.today() - timedelta(days=1)
-prev_date_formated = prev_date.strftime("%Y-%m-%d")
+date_3_mths_ago = date.today() - timedelta(days=1) - relativedelta(months=3)
+prev_date_formatted = prev_date.strftime("%Y-%m-%d")
+date_3_mths_ago_formatted = date_3_mths_ago.strftime("%Y-%m-%d")
 
 
 # Get stock quote
@@ -34,7 +37,7 @@ def get_stock_price(ticker, startdate, enddate) -> pd.DataFrame:
 
 
 # create a AUS Holiday dataframe
-start = date(2013, 1, 1)
+start = date(2023, 1, 1)
 end = date(2030, 1, 1)
 
 year_range = [year for year in range(start.year, end.year + 1)]
@@ -48,7 +51,7 @@ for date, name in sorted(holidays.Australia(years=year_range).items()):
 holiday["ds"] = pd.to_datetime(holiday["ds"], format="%Y-%m-%d", errors="ignore")
 
 # obtain historical data
-df = get_stock_price("TLS.AX", "2013-01-01", prev_date_formated)
+df = get_stock_price("TLS.AX", date_3_mths_ago_formatted, prev_date_formatted)
 
 df.drop(
     ["Open", "High", "Low", "Volume", "Dividends", "Stock Splits"], axis=1, inplace=True
@@ -84,9 +87,9 @@ baseline_model.fit(df_train)
 # Cross validation
 baseline_model_cv = cross_validation(
     model=baseline_model,
-    initial="200 days",
-    period="30 days",
-    horizon="30 days",
+    initial="60 days",
+    period="3 days",
+    horizon="3 days",
     parallel="processes",
 )
 baseline_model_cv.head()
@@ -105,6 +108,13 @@ yhat_baseline = df_pred_baseline["yhat"]
 actuals = df_test["y"]
 print(f"MAE on test set: {mean_absolute_error(actuals, yhat_baseline)}")
 print(f"RMSE on test set: {mean_squared_error(actuals, yhat_baseline, squared=False)}")
+
+# plots
+baseline_model.plot(df_pred_baseline)
+plt.show()
+
+baseline_model.plot_components(df_pred_baseline)
+plt.show()
 
 # Hyperparameter tuning
 # Set up parameter grid
@@ -129,7 +139,7 @@ for params in all_params:
 
     # Cross-validation
     df_cv = cross_validation(
-        m, initial="200 days", period="30 days", horizon="30 days", parallel="processes"
+        m, initial="60 days", period="3 days", horizon="3 days", parallel="processes"
     )
 
     # Model performance
@@ -157,9 +167,9 @@ auto_model.fit(df_train)
 # Cross validation
 auto_model_cv = cross_validation(
     auto_model,
-    initial="200 days",
-    period="30 days",
-    horizon="30 days",
+    initial="60 days",
+    period="3 days",
+    horizon="3 days",
     parallel="processes",
 )
 
@@ -173,3 +183,10 @@ df_pred_tuned = auto_model.predict(df_test)
 yhat_tuned = df_pred_tuned["yhat"]
 print(f"MAE on test set: {mean_absolute_error(actuals, yhat_tuned)}")
 print(f"RMSE on test set: {mean_squared_error(actuals, yhat_tuned, squared=False)}")
+
+# plots
+auto_model.plot(df_pred_baseline)
+plt.show()
+
+auto_model.plot_components(df_pred_baseline)
+plt.show()
