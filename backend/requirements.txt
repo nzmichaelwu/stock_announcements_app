@@ -24,3 +24,4 @@ prophet==1.1.2
 yfinance==0.2.14
 seaborn==0.12.2
 holidays==0.22
+scikit-learn==1.0.2
