@@ -1,7 +1,7 @@
 <template>
   <v-app>
     <v-col cols="4">
-      <div id="app">
+      <div id="inputs">
         <v-row>
           <input type="text" v-model="ticker" placeholder="Enter stock ticker">
         </v-row>
@@ -13,15 +13,26 @@
         </v-row>
       </div>
     </v-col>
+    <v-col cols="8">
+      <div id="chart">
+        <time-series-chart :time-series-data="forecastData"></time-series-chart>
+      </div>
+    </v-col>
   </v-app>
 </template>
+
 <script>
   import axios from 'axios';
+  import TimeSeriesChart from './TimeSeriesChart.vue';
 
   export default {
+    components: {
+      TimeSeriesChart
+    },
     data() {
       return {
         ticker: '',
+        forecastData: null,
       };
     },
     methods: {
@@ -44,11 +55,18 @@
       doForecast() {
         // Get forecast output
         axios.get('/api/contents/forecast')
-          .then(response => (
-          this.full_data = response.data.items,
-          console.log(response.data.items)
-        ))
+        .then(response => {
+          const forecastData = JSON.parse(response.data);
+
+          this.forecastData = forecastData;
+        })
+        .catch(error => {
+          console.error('Error fetching forecast data', erorr);
+        });
       },
     },
+    mounted() {
+      this.doForecast();
+    }
   };
 </script>

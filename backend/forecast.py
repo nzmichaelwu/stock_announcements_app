@@ -15,6 +15,7 @@ import holidays
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+import polars as pl
 import regex as re
 import seaborn as sns
 import yaml
@@ -41,8 +42,8 @@ set_up_logging(logger, log_dir_exp / "logs.txt")  # appends to file by default i
 logging.getLogger("fbprophet").setLevel(logging.WARNING)
 
 # define date range to get holidays in between
-start = date(2023, 1, 1)
-end = date(2033, 1, 1)
+holiday_start = date(2023, 1, 1)
+holiday_start = date(2033, 1, 1)
 
 
 # Get stock quote
@@ -55,7 +56,7 @@ def get_stock_price(ticker, startdate, enddate) -> pd.DataFrame:
 
 # Function to return holiday df
 def get_holiday() -> pd.DataFrame:
-    year_range = [year for year in range(start.year, end.year + 1)]
+    year_range = [year for year in range(holiday_start.year, holiday_start.year + 1)]
 
     holiday = pd.DataFrame([])
     for date, name in sorted(holidays.Australia(years=year_range).items()):
@@ -87,11 +88,10 @@ def date_by_adding_business_days_l(from_date, add_days) -> list:
 
 
 # Function to get stock price for stock and split data into train and test
-def create_dfs(df):
-    df.drop(
+def create_dfs(stock_df):
+    df = stock_df.drop(
         ["Open", "High", "Low", "Volume", "Dividends", "Stock Splits"],
         axis=1,
-        inplace=True,
     )
 
     # Change all column headings to be lower case, and remove spacing
@@ -252,11 +252,13 @@ def train_tuned_model(df_train, df_test, best_params) -> Prophet:
 
 
 # def main():
-def do_forecast(ticker: str):
+def do_forecast(ticker: str) -> pl.DataFrame:
     ticker_code = ticker
 
     # variables
-    prev_date = date.today() - timedelta(days=1)
+    prev_date = (
+        date.today()
+    )  # dont need the "-timedelta(days=1)" as the end in stock.history already takes T-1 day
     date_3_mths_ago = date.today() - timedelta(days=1) - relativedelta(months=3)
     prev_date_formatted = prev_date.strftime("%Y-%m-%d")
     date_3_mths_ago_formatted = date_3_mths_ago.strftime("%Y-%m-%d")
@@ -288,7 +290,9 @@ def do_forecast(ticker: str):
     tuned_model = train_tuned_model(df_train, df_test, best_params)
 
     # Forecast 3 business days into future
-    future = date_by_adding_business_days_l(prev_date, 3)
+    future = date_by_adding_business_days_l(
+        prev_date - timedelta(days=1), 4
+    )  # here we need to do prev_date - timedelta(days=1) because we still want to forecast for the current day (i.e. today)
     df_future = pd.DataFrame(future, columns=["ds"])
 
     logger.info(f"best_params: \n{best_params}")
@@ -299,6 +303,19 @@ def do_forecast(ticker: str):
     # plt.show()
     end = time.time()
     logger.info(f"hyper tuned model and prediction took {end-start} seconds")
+
+    # wrangle dataframe to return
+    df_hist = stock_df[["Date", "Close"]].rename(
+        columns={"Date": "labels", "Close": "values"}
+    )
+    df_forecast = forecast[["ds", "yhat"]].rename(
+        columns={"ds": "labels", "yhat": "values"}
+    )
+    df_full = pd.concat([df_hist, df_forecast], axis=0).reset_index(drop=True)
+
+    # convert pandas into polars
+    df_full_pl = pl.from_pandas(df_full)
+    return df_full_pl
 
 
 # if __name__ == "__main__":
