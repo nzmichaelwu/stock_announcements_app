@@ -306,16 +306,17 @@ def do_forecast(ticker: str) -> pl.DataFrame:
 
     # wrangle dataframe to return
     df_hist = stock_df[["Date", "Close"]].rename(
-        columns={"Date": "labels", "Close": "values"}
+        columns={"Date": "date", "Close": "value"}
     )
     df_forecast = forecast[["ds", "yhat"]].rename(
-        columns={"ds": "labels", "yhat": "values"}
+        columns={"ds": "date", "yhat": "value"}
     )
     df_full = pd.concat([df_hist, df_forecast], axis=0).reset_index(drop=True)
 
-    # convert pandas into polars
-    df_full_pl = pl.from_pandas(df_full)
-    return df_full_pl
+    # convert the pandas df into a list of dict
+    df_full_dict = df_full.to_dict("records")
+
+    return df_full_dict
 
 
 # if __name__ == "__main__":

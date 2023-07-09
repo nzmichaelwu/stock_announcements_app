@@ -14,7 +14,7 @@ RUN apt-get update && apt-get install -y \
   gnupg2 \
   libcurl4-gnutls-dev \
   libsasl2-dev \
-  python-dev \
+  python-dev-is-python3 \
   libldap2-dev \
   libssl-dev \
   nginx \

@@ -15,7 +15,7 @@
     </v-col>
     <v-col cols="8">
       <div id="chart">
-        <time-series-chart :time-series-data="forecastData"></time-series-chart>
+        <time-series-chart v-if="ticker && forecastData" :time-series-data="forecastData"></time-series-chart>
       </div>
     </v-col>
   </v-app>
@@ -53,20 +53,24 @@
           });
       },
       doForecast() {
-        // Get forecast output
-        axios.get('/api/contents/forecast')
-        .then(response => {
-          const forecastData = JSON.parse(response.data);
-
-          this.forecastData = forecastData;
-        })
-        .catch(error => {
-          console.error('Error fetching forecast data', erorr);
-        });
-      },
+        if (this.ticker) {
+            console.log('Running Prophet forecast model...')
+            // Get forecast output
+            axios.get('/api/contents/forecast')
+            .then(response => {
+              this.forecastData = response.data;
+              console.log(response.data)
+            })
+            .catch(error => {
+              console.error('Error fetching forecast data', error);
+            });
+          } else {
+          console.log('No ticker code provided yet...')
+        }
+      }
     },
     mounted() {
       this.doForecast();
     }
-  };
+  }
 </script>

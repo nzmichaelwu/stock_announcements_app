@@ -161,9 +161,7 @@ async def run_forecast():
     global ticker
 
     if ticker:
-        df_forecast = do_forecast(ticker)
-        df_forecast_json = df_forecast.to_pandas().to_json(orient="records")
-        return df_forecast_json
+        return jsonify(items=do_forecast(ticker), status=200)
     else:
         return "No ticker code provided!"
 
