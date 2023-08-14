@@ -6,16 +6,29 @@
           <input type="text" v-model="ticker" placeholder="Enter stock ticker">
         </v-row>
         <v-row>
-          <button @click="sendTicker">Store Ticker</button>
+          <button @click="sendTicker"
+              small
+              text
+              color="primary"
+              class="ml-2 mb-2"
+          >Store Ticker</button>
         </v-row>
+      </div>
+      <v-spacer></v-spacer>
+      <div id="forecast">
         <v-row>
-          <button @click="doForecast">Run Forecast</button>
+          <button v-on:click="doForecast"
+              small
+              text
+              color="primary"
+              class="ml-2 mb-2"
+          >Run Forecast</button>
         </v-row>
       </div>
     </v-col>
     <v-col cols="8">
       <div id="chart">
-        <time-series-chart v-if="ticker && forecastData" :time-series-data="forecastData"></time-series-chart>
+        <time-series-chart v-if="ticker && forecastData" :forecastData="forecastData"></time-series-chart>
       </div>
     </v-col>
   </v-app>
@@ -59,7 +72,7 @@
             axios.get('/api/contents/forecast')
             .then(response => {
               this.forecastData = response.data;
-              console.log(response.data)
+              // console.log(response.data)
             })
             .catch(error => {
               console.error('Error fetching forecast data', error);
@@ -69,7 +82,7 @@
         }
       }
     },
-    mounted() {
+    updated() {
       this.doForecast();
     }
   }
