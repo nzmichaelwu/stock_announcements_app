@@ -27,8 +27,14 @@
       </div>
     </v-col>
     <v-col cols="8">
-      <div id="chart">
-        <time-series-chart v-if="ticker && forecastData" :forecastData="forecastData"></time-series-chart>
+      <div id="chart_container">
+        <div id="chart_title">
+          <h2>Forecast Chart</h2>
+        </div>
+        <hr>
+        <div id="chart_content">
+          <time-series-chart v-if="loaded" :chart-data="forecastData" :chart-labels="labels"></time-series-chart>
+        </div>
       </div>
     </v-col>
   </v-app>
@@ -45,8 +51,19 @@
     data() {
       return {
         ticker: '',
-        forecastData: null,
+        loaded: false,
+        loading: false,
+        forecastData: [],
+        labels: [],
+        rawData: '',
       };
+    },
+    mounted() {
+      if (this.ticker != '') {
+        this.doForecast()
+      } else {
+          console.log('No ticker code provided yet...')
+      }
     },
     methods: {
       sendTicker() {
@@ -65,25 +82,33 @@
             console.error('Error sending ticker', error);
           });
       },
+      resetState() {
+        this.loaded = false
+      },
       doForecast() {
-        if (this.ticker) {
-            console.log('Running Prophet forecast model...')
-            // Get forecast output
-            axios.get('/api/contents/forecast')
-            .then(response => {
-              this.forecastData = response.data;
-              // console.log(response.data)
-            })
-            .catch(error => {
-              console.error('Error fetching forecast data', error);
-            });
-          } else {
-          console.log('No ticker code provided yet...')
+        if (this.ticker === '') {
+          this.loading = false
+          return
         }
+        console.log(this.loading)
+        this.resetState()
+        this.loading = true
+        console.log(this.loading)
+        console.log('Running Prophet forecast model...')
+        // Get forecast output
+        axios.get('/api/contents/forecast')
+        .then(response => {
+          console.log(response.data)
+          this.rawData = response.data.items
+          this.forecastData = response.data.items.map(item => item.value)
+          this.labels = response.data.items.map(item => item.date)
+          this.loaded = true
+          this.loading = false
+        })
+        .catch(error => {
+          console.error('Error fetching forecast data', error);
+        });
       }
     },
-    updated() {
-      this.doForecast();
-    }
   }
 </script>
