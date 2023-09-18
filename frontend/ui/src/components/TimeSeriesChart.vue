@@ -1,15 +1,29 @@
-<script>
+<template>
+  <Line :chart-data="chartData" />
+</template>
 
-import { Line } from 'vue-chartjs';
-import { Chart as ChartJS, Title, Tooltip, Legend, LineElement, CategoryScale, LinearScale } from 'chart.js'
+<script>
+import {
+  Line
+} from 'vue-chartjs';
+import {
+  Chart as ChartJS,
+  Title,
+  Tooltip,
+  Legend,
+  LineElement,
+  CategoryScale,
+  LinearScale
+} from 'chart.js'
 
 ChartJS.register(Title, Tooltip, Legend, LineElement, CategoryScale, LinearScale)
 
 export default {
-  extends: Line,
+  name: 'TimeSeriesChart',
+  components: { Line },
   props: {
-    chartData: {
-      type: Array,
+    datasets: {
+      type: [Array, Object],
       required: true
     },
     chartLabels: {
@@ -17,8 +31,27 @@ export default {
       required: true
     }
   },
-  data () {
+  data() {
     return {
+      chartData: {
+        labels: this.chartLabels,
+        datasets: [
+          {
+            label: 'time_series',
+            borderColor: '#249EBF',
+            pointBackgroundColor: 'rgba(0,0,0,0)',
+            pointBorderColor: 'rgba(0,0,0,0)',
+            pointHoverBorderColor: '#249EBF',
+            pointHoverBackgroundColor: '#fff',
+            pointHoverRadius: 4,
+            pointHitRadius: 10,
+            pointHoverBorderWidth: 1,
+            borderWidth: 1,
+            // backgroundColor: this.gradient,
+            data: this.datasets
+          }
+        ]
+      },
       gradient: null,
       options: {
         showScale: true,
@@ -36,7 +69,7 @@ export default {
               borderDash: [5, 15]
             }
           }],
-          xAxes: [ {
+          xAxes: [{
             gridLines: {
               display: true,
               color: '#EEF0F4',
@@ -77,25 +110,24 @@ export default {
     }
   },
   mounted() {
-  this.renderChart({
-      labels: this.chartLabels,
-      datasets: [
-        {
-          label: 'time_series',
-          borderColor: '#249EBF',
-          pointBackgroundColor: 'rgba(0,0,0,0)',
-          pointBorderColor: 'rgba(0,0,0,0)',
-          pointHoverBorderColor: '#249EBF',
-          pointHoverBackgroundColor: '#fff',
-          pointHoverRadius: 4,
-          pointHitRadius: 10,
-          pointHoverBorderWidth: 1,
-          borderWidth: 1,
-          // backgroundColor: this.gradient,
-          data: this.chartData
-        }
-      ]
-    }, this.options)
+    // this.renderChart({
+    //   labels: this.chartLabels,
+    //   datasets: [{
+    //     label: 'time_series',
+    //     borderColor: '#249EBF',
+    //     pointBackgroundColor: 'rgba(0,0,0,0)',
+    //     pointBorderColor: 'rgba(0,0,0,0)',
+    //     pointHoverBorderColor: '#249EBF',
+    //     pointHoverBackgroundColor: '#fff',
+    //     pointHoverRadius: 4,
+    //     pointHitRadius: 10,
+    //     pointHoverBorderWidth: 1,
+    //     borderWidth: 1,
+    //     // backgroundColor: this.gradient,
+    //     data: this.chartData
+    //   }]
+    // }, this.options)
+    console.log(this.datasetsf)
   }
 }
 </script>

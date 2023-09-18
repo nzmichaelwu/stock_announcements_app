@@ -6,7 +6,6 @@ import regex as re
 import yaml
 from box import Box
 
-cfg = Box(yaml.safe_load(open("config.yml")))
 
 # helper function that adds columns relevant to a date (e.g. is_month_end)
 # source: https://docs.fast.ai/tabular.core.html#add_datepart

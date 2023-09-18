@@ -20,7 +20,7 @@ psutil==5.9.4
 polars==0.16.16
 pyarrow==11.0.0
 python-box==7.0.1
-prophet==1.1.2
+xgboost==1.5.2
 yfinance==0.2.14
 seaborn==0.12.2
 holidays==0.22

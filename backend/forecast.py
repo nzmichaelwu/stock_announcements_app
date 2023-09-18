@@ -22,10 +22,10 @@ import yaml
 import yfinance as yf
 from box import Box
 from dateutil.relativedelta import relativedelta
-from prophet import Prophet
-from prophet.diagnostics import cross_validation, performance_metrics
+import xgboost as xgb
 from sklearn.metrics import mean_absolute_error, mean_squared_error
 from utils.logging import set_up_logging
+from utils.global_functions import add_datepart, add_lags
 
 cfg = Box(yaml.safe_load(open("config_db.yml")))
 
@@ -43,7 +43,7 @@ logging.getLogger("fbprophet").setLevel(logging.WARNING)
 
 # define date range to get holidays in between
 holiday_start = date(2023, 1, 1)
-holiday_start = date(2033, 1, 1)
+holiday_end = date(2033, 1, 1)
 
 
 # Get stock quote
@@ -56,7 +56,7 @@ def get_stock_price(ticker, startdate, enddate) -> pd.DataFrame:
 
 # Function to return holiday df
 def get_holiday() -> pd.DataFrame:
-    year_range = [year for year in range(holiday_start.year, holiday_start.year + 1)]
+    year_range = [year for year in range(holiday_start.year, holiday_end.year + 1)]
 
     holiday = pd.DataFrame([])
     for date, name in sorted(holidays.Australia(years=year_range).items()):
@@ -88,167 +88,54 @@ def date_by_adding_business_days_l(from_date, add_days) -> list:
 
 
 # Function to get stock price for stock and split data into train and test
-def create_dfs(stock_df):
-    df = stock_df.drop(
-        ["Open", "High", "Low", "Volume", "Dividends", "Stock Splits"],
-        axis=1,
-    )
+def create_dfs(df: pd.DataFrame, N: int):
+    """
+    Features generation
+    - this section is to generate some features for the xgboost regression model to predict the stock price
+    """
+    # add lags up to N number of days to use as features
+    df_lags = add_lags(df, N, ["close"])
 
-    # Change all column headings to be lower case, and remove spacing
-    df.columns = [str(x).lower().replace(" ", "_") for x in df.columns]
+    """
+        Shift label column and drop invalid samples
+    """
+    df_lags["close"] = df_lags["close"].shift(-1)
 
-    ### Prophet ---
-    # prepare expected column names
-    df.columns = ["ds", "y"]
-    df["ds"] = pd.to_datetime(df["ds"])
+    df_lags = df_lags.loc[10:]  # because of close_lag_10
+    df_lags = df_lags[:-1]  # because of shifting close price
 
-    # # Visualize data using seaborn
-    # sns.set(rc={"figure.figsize": (12, 8)})
-    # sns.lineplot(x=df["ds"], y=df["y"])
-    # plt.legend(["TLS"])
-    # plt.show()
+    """
+        train, validation, test split
+        70% on train, 15% on validation, 15% on test
+    """
+    test_size = 0.15
+    val_size = 0.15
 
-    # Split data into train and test (80% vs 20%)
-    test_size = 0.2
-    test_split_idx = int(df.shape[0] * (1 - test_size))
+    test_split_idx = int(df_lags.shape[0] * (1 - test_size))
+    val_split_idx = int(df_lags.shape[0] * (1 - (val_size + test_size)))
 
-    df_train = df.loc[:test_split_idx].copy()
-    df_test = df.loc[test_split_idx + 1 :].copy()
+    df_train = df_lags.loc[:val_split_idx].copy()
+    df_val = df_lags.loc[val_split_idx + 1 : test_split_idx].copy()
+    df_test = df_lags.loc[test_split_idx + 1 :].copy()
 
-    return df_train, df_test
+    # drop unnecessary columns
+    drop_cols = ["date", "order_day"]
 
+    df_train = df_train.drop(drop_cols, axis=1)
+    df_val = df_val.drop(drop_cols, axis=1)
+    df_test = df_test.drop(drop_cols, axis=1)
 
-# Baseline Prophet model
-def train_baseline_model(df_train, df_test) -> Prophet:
-    # Initiate the model
-    baseline_model = Prophet()  # Fit the model on the training dataset
+    # split into features and labels
+    X_train = df_train.drop(["close"], axis=1)
+    y_train = df_train["close"]
 
-    baseline_model.fit(df_train)
+    X_val = df_val.drop(["close"], axis=1)
+    y_val = df_val["close"]
 
-    # Cross validation
-    baseline_model_cv = cross_validation(
-        model=baseline_model,
-        initial="60 days",
-        period="3 days",
-        horizon="3 days",
-        parallel="processes",
-    )
+    X_test = df_test.drop(["close"], axis=1)
+    y_test = df_test["close"]
 
-    # Model performance metrics
-    baseline_model_p = performance_metrics(baseline_model_cv, rolling_window=1)
-
-    # Get the performance metric value
-    logger.info(f'MAE for baseline model: {baseline_model_p["mae"].values[0]}')
-    logger.info(f'RMSE for baseline model: {baseline_model_p["rmse"].values[0]}')
-
-    # Evaluation on test set using the baseline_model
-    df_pred_baseline = baseline_model.predict(df_test)
-    yhat_baseline = df_pred_baseline["yhat"]
-    actuals = df_test["y"]
-    logger.info(f"MAE on test set: {mean_absolute_error(actuals, yhat_baseline)}")
-    logger.info(
-        f"RMSE on test set: {mean_squared_error(actuals, yhat_baseline, squared=False)}"
-    )
-
-    # # plots
-    # baseline_model.plot(df_pred_baseline)
-    # plt.show()
-
-    # baseline_model.plot_components(df_pred_baseline)
-    # plt.show()
-
-    return baseline_model
-
-
-# Hyperparameter tuning
-def hyper_param_tune(df_train):
-    # Set up parameter grid
-    param_grid = {
-        "changepoint_prior_scale": [0.001, 0.01, 0.05],
-        "seasonality_prior_scale": [0.01, 1, 5, 10],
-        "seasonality_mode": ["additive", "multiplicative"],
-    }
-
-    # Generate all combinations of parameters
-    all_params = [
-        dict(zip(param_grid.keys(), v)) for v in itertools.product(*param_grid.values())
-    ]
-
-    # Create a list to store MAPE values for each combination
-    maes = []
-
-    # Use cross validation to evaluate all parameters
-    for params in all_params:
-        # Fit a model using one parameter combination
-        m = Prophet(**params).fit(df_train)
-
-        # Cross-validation
-        df_cv = cross_validation(
-            m,
-            initial="60 days",
-            period="3 days",
-            horizon="3 days",
-            parallel="processes",
-        )
-
-        # Model performance
-        df_p = performance_metrics(df_cv, rolling_window=1)
-
-        # Save model performance metrics
-        maes.append(df_p["mae"].values[0])
-
-    # Tuning results
-    tuning_results = pd.DataFrame(all_params)
-    tuning_results["mae"] = maes  # Find the best parameters
-    best_params = all_params[np.argmin(maes)]
-    logger.info(f"best_params: {best_params}")
-
-    return best_params
-
-
-def train_tuned_model(df_train, df_test, best_params) -> Prophet:
-    # Fit the model using the best parameters
-    tuned_model = Prophet(
-        changepoint_prior_scale=best_params["changepoint_prior_scale"],
-        seasonality_prior_scale=best_params["seasonality_prior_scale"],
-        seasonality_mode=best_params["seasonality_mode"],
-    )
-
-    # Fit the model on the training dataset
-    tuned_model.fit(df_train)
-
-    # Cross validation
-    tuned_model_cv = cross_validation(
-        tuned_model,
-        initial="60 days",
-        period="3 days",
-        horizon="3 days",
-        parallel="processes",
-    )
-
-    # Model performance metrics
-    tuned_model_p = performance_metrics(tuned_model_cv, rolling_window=1)
-
-    # Get the performance metric value
-    logger.info(f'MAE for tuned model: {tuned_model_p["mae"].values[0]}')
-    logger.info(f'RMSE for tuned model: {tuned_model_p["rmse"].values[0]}')
-
-    # Evaluation on test set using the tuned_model
-    df_pred_tuned = tuned_model.predict(df_test)
-    yhat_tuned = df_pred_tuned["yhat"]
-    actuals = df_test["y"]
-    logger.info(f"MAE on test set: {mean_absolute_error(actuals, yhat_tuned)}")
-    logger.info(
-        f"RMSE on test set: {mean_squared_error(actuals, yhat_tuned, squared=False)}"
-    )
-
-    # # plots
-    # tuned_model.plot(df_pred_baseline)
-    # plt.show()
-
-    # tuned_model.plot_components(df_pred_baseline)
-    # plt.show()
-    return tuned_model
+    return X_train, y_train, X_val, y_val, X_test, y_test
 
 
 # def main():
@@ -259,59 +146,84 @@ def do_forecast(ticker: str) -> pl.DataFrame:
     prev_date = (
         date.today()
     )  # dont need the "-timedelta(days=1)" as the end in stock.history already takes T-1 day
-    date_3_mths_ago = date.today() - timedelta(days=1) - relativedelta(months=3)
+    date_3_years_ago = date.today() - timedelta(days=1) - relativedelta(years=3)
     prev_date_formatted = prev_date.strftime("%Y-%m-%d")
-    date_3_mths_ago_formatted = date_3_mths_ago.strftime("%Y-%m-%d")
+    date_3_years_ago_formatted = date_3_years_ago.strftime("%Y-%m-%d")
 
     try:
         stock_df = get_stock_price(
-            ticker_code, date_3_mths_ago_formatted, prev_date_formatted
+            ticker_code, date_3_years_ago_formatted, prev_date_formatted
         )
-        logger.info("obtained stock df...")
+        logger.info(f"obtained stock df, with the shape of {stock_df.shape}...")
     except AttributeError:
         logger.info("incorrect ticker code provided, please enter again...")
         ticker_code = ticker
         stock_df = get_stock_price(
-            ticker_code, date_3_mths_ago_formatted, prev_date_formatted
+            ticker_code, date_3_years_ago_formatted, prev_date_formatted
         )
         logger.info("obtained stock df...")
     except:
         logger.error("something else went wrong...")
 
-    df_train, df_test = create_dfs(stock_df)
+    stock_df_mod = stock_df.drop(
+        ["Open", "High", "Low", "Volume", "Dividends", "Stock Splits"],
+        axis=1,
+    )
 
-    logger.info("split stock_df into training and test set...")
-    logger.info(f"the shape for df_train is {df_train.shape}")
-    logger.info(f"the shape for df_test is {df_test.shape}")
+    # Change all column headings to be lower case, and remove spacing
+    stock_df_mod.columns = [
+        str(x).lower().replace(" ", "_") for x in stock_df_mod.columns
+    ]
+
+    N = 10  # define number of days to lag
+    X_train, y_train, X_val, y_val, X_test, y_test = create_dfs(stock_df_mod, N)
+
+    logger.info("split stock_df into training, val, and test sets...")
+    logger.info(f"the shape for X_train is {X_train.shape}")
+    logger.info(f"the shape for X_val is {X_val.shape}")
+    logger.info(f"the shape for df_test is {X_test.shape}")
 
     start = time.time()
-    # baseline_model = train_baseline_model(df_train, df_test)
-    best_params = hyper_param_tune(df_train)
-    tuned_model = train_tuned_model(df_train, df_test, best_params)
+    eval_set = [(X_train, y_train), (X_val, y_val)]
+    model = xgb.XGBRegressor(
+        colsample_bytree=0.9,
+        learning_rate=0.03,
+        max_depth=8,
+        min_child_weight=3,
+        n_estimators=200,
+        subsample=0.65,
+    )
+
+    model.fit(X_train, y_train, eval_set=eval_set, verbose=True)
 
     # Forecast 3 business days into future
     future = date_by_adding_business_days_l(
         prev_date - timedelta(days=1), 4
     )  # here we need to do prev_date - timedelta(days=1) because we still want to forecast for the current day (i.e. today)
-    df_future = pd.DataFrame(future, columns=["ds"])
+    df_future = pd.DataFrame(future, columns=["date"])
 
-    logger.info(f"best_params: \n{best_params}")
-    forecast = tuned_model.predict(df_future)
-    logger.info("prediction for the next day...")
-    logger.info(f"\n{forecast.loc[0]}")
-    # tuned_model.plot(forecast)
-    # plt.show()
+    df_future_pred = pd.concat([stock_df_mod, df_future], axis=0).reset_index(drop=True)
+    df_future_pred_lags = add_lags(df_future_pred, N, ["close"])
+    drop_cols = ["date", "order_day"]
+    df_future_pred_lags = df_future_pred_lags.drop(drop_cols, axis=1)
+    X_future_pred = df_future_pred_lags.drop(["close"], axis=1)[-4:]
+
+    # NOTE: Can only predict next day good, subsequent dates aren't great...
+    forecast = model.predict(X_future_pred)
+    df_forecast = df_future_pred[-4:].copy()
+    df_forecast["close"] = forecast
+
+    logger.info(f"prediction for the next day is {forecast[0]}")
     end = time.time()
-    logger.info(f"hyper tuned model and prediction took {end-start} seconds")
+    logger.info(f"XGB regression model and prediction took {end-start} seconds")
 
     # wrangle dataframe to return
     df_hist = stock_df[["Date", "Close"]].rename(
         columns={"Date": "date", "Close": "value"}
     )
-    df_forecast = forecast[["ds", "yhat"]].rename(
-        columns={"ds": "date", "yhat": "value"}
-    )
+    df_forecast = df_forecast.rename(columns={"close": "value"})
     df_full = pd.concat([df_hist, df_forecast], axis=0).reset_index(drop=True)
+    df_full["date"] = pd.to_datetime(df_full["date"]).dt.date
 
     # convert the pandas df into a list of dict
     df_full_dict = df_full.to_dict("records")

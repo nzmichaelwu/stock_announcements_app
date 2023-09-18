@@ -48,7 +48,6 @@ RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 WORKDIR /usr/src/backend
 
 # add and install requirements
-RUN pip install pystan==2.19.1.1
 COPY ./requirements.txt /usr/src/backend/requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
 
