@@ -129,6 +129,7 @@ dmypy.json
 .pyre/
 
 # other file type
+backend/logs/
 ./frontend/.vscode
 *.csv
 ./frontend/ui/README.md

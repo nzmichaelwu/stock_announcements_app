@@ -1,23 +1,18 @@
 # import libraries
-import os
-import re
-import subprocess
-import sys
+import logging
 import time
-from datetime import date, datetime
-from re import sub
-from turtle import pos
 
 import pandas as pd
 import polars as pl
 import yaml
-from extensions import TIMEOUT, cache, logger
-from pyparsing import col
-from sqlalchemy import column, create_engine
-from src.util import DotDict, get_mem
+from box import Box
+from sqlalchemy import create_engine
+from utils.util import get_mem
 
-cfg = DotDict(yaml.safe_load(open("config_db.yml")))
+cfg = Box(yaml.safe_load(open("config_db.yml")))
 
+### set up logging and other params ----
+logger = logging.getLogger()
 
 # function to get data from hotcopper table
 def get_hotcopper():
@@ -51,7 +46,7 @@ def get_hotcopper():
 
     postgresql_engine.dispose()
 
-    logger.debug(f"memory being used: {get_mem()}")
+    logger.info(f"memory being used: {get_mem()}")
 
     end = time.time()
     logger.info(f"{end-start} secs used to get announcements data...")
@@ -109,7 +104,7 @@ def get_marketindex():
 
     postgresql_engine.dispose()
 
-    logger.debug(f"memory being used: {get_mem()}")
+    logger.info(f"memory being used: {get_mem()}")
 
     end = time.time()
     logger.info(f"{end-start} secs used to get market_index data...")
@@ -165,7 +160,7 @@ def get_afr():
 
     postgresql_engine.dispose()
 
-    logger.debug(f"memory being used: {get_mem()}")
+    logger.info(f"memory being used: {get_mem()}")
 
     end = time.time()
     logger.info(f"{end-start} secs used to get afr data...")
@@ -218,7 +213,7 @@ def get_aus():
 
     postgresql_engine.dispose()
 
-    logger.debug(f"memory being used: {get_mem()}")
+    logger.info(f"memory being used: {get_mem()}")
 
     end = time.time()
     logger.info(f"{end-start} secs used to get aus data...")

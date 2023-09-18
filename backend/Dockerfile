@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 
-FROM python:3.7-slim-buster
+FROM python:3.7
 
 # Install system libraries
 RUN apt-get update && apt-get install -y \
@@ -14,7 +14,7 @@ RUN apt-get update && apt-get install -y \
   gnupg2 \
   libcurl4-gnutls-dev \
   libsasl2-dev \
-  python-dev \
+  python-dev-is-python3 \
   libldap2-dev \
   libssl-dev \
   nginx \
@@ -63,7 +63,7 @@ COPY . /usr/src/backend
 EXPOSE 1234
 
 # Create a folder called log for backend
-RUN mkdir -p /var/log/backend
+RUN mkdir -p /usr/src/backend/logs
 
 CMD ["gunicorn", "app:app", "--bind", "0.0.0.0:1234", "--workers=4", "--timeout=240"]
 

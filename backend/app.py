@@ -1,34 +1,51 @@
 # import libraries
 import json
-import os
-import subprocess
-import sys
+import logging
 import time
-from datetime import datetime
+from datetime import datetime as dt
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
 import polars as pl
 import yaml
+from box import Box
 from database import get_afr, get_aus, get_hotcopper, get_marketindex
-from extensions import TIMEOUT, cache, logger
-from flask import Flask, jsonify
+from flask import Flask, jsonify, request
 from flask_cors import CORS
-from src.util import get_mem
+from forecast import do_forecast
+from utils.logging import set_up_logging
+from utils.util import get_mem
+
+cfg = Box(yaml.safe_load(open("config_db.yml")))
+
+### set up logging and other params ----
+logger = logging.getLogger()
+LOG_DIR = Path(f"{cfg.out.LOGS}")
+LOG_DIR.mkdir(parents=True, exist_ok=True)
+
+RUN_Date = dt.today().strftime("%Y%m%d")
+
+log_dir_exp = LOG_DIR / f"app_logs_{RUN_Date}"
+log_dir_exp.mkdir(parents=True, exist_ok=True)
+set_up_logging(logger, log_dir_exp / "logs.txt")  # appends to file by default if exists
+
 
 # configuration
 DEBUG = True
 
-logger.debug("starting the app")
+logger.info("starting the app")
 
 # define app
 app = Flask(__name__)
 
 CORS(app, resources={r"/*": {"origins": "*"}})
 
+ticker = None
+
 
 # load announcements data
-def load_announcements_data():
+def load_announcements_data() -> dict:
     logger.info(f"Loading announcement data...")
     start_time = time.time()
 
@@ -76,7 +93,7 @@ def load_announcements_data():
 
 
 # load news data
-def load_news_data():
+def load_news_data() -> dict:
     logger.debug(f"Loading news data...")
     start_time = time.time()
 
@@ -124,6 +141,29 @@ async def announcements_data():
 @app.route("/api/contents/news", methods=["GET"])
 async def news_data():
     return jsonify(items=load_news_data(), status=200)
+
+
+# get stock ticker
+@app.route("/api/contents/forecast", methods=["POST"])
+async def process_ticker():
+    global ticker
+
+    try:
+        ticker = request.json["ticker"]
+        logger.info(f"ticker processed successfully, ticker is {ticker}.")
+        return "Ticker code processed successfully"
+    except KeyError:
+        return {"error": "Ticker code not provided"}, 400
+
+
+@app.route("/api/contents/forecast", methods=["GET"])
+async def run_forecast():
+    global ticker
+
+    if ticker:
+        return jsonify(items=do_forecast(ticker), status=200)
+    else:
+        return "No ticker code provided!"
 
 
 if __name__ == "__main__":
