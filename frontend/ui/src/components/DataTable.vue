@@ -17,7 +17,12 @@
             ></v-text-field>
           </v-row>
         </v-col>
-        <v-col offset-md="3" style="padding-top: 30px">
+        <v-col cols="3" style="'padding-top: 60px">
+          <v-row>
+            <p>Current Datetime: {{ currentDateTime }}</p>
+          </v-row>
+        </v-col>
+        <v-col cols="6" style="padding-top: 50px">
           <v-row class="pa-6">
             <label for="" style="padding-right: 10px">From:</label>
             <input type="datetime-local" v-model="startDate" style="padding-right: 10px">
@@ -35,6 +40,12 @@
       class="elevation-1"
       v-show="announcements.length!=0"
     > 
+      <template v-slot::item="{ item, index }">
+        <tr>
+          <td :class="{'highlighted-cell': isWithin5Minutes(item.announcementTime)}">{{ item.announcementTime }}</td>
+          <td>{{ timeDifference[index] }} minutes</td>
+        </tr>
+      </template>
       <template v-slot:[`item.market_cap`]="{ item }">
           {{ formatNumber(item.market_cap) }}
       </template>
@@ -99,8 +110,10 @@
 
 
 <script>
-import axios from '../axios/axios'
+// import axios from '../axios/axios'
+import axios from 'axios'
 import GridLoader from 'vue-spinner/src/GridLoader.vue'
+import { DateTime } from 'luxon';
 
 export default {
   data(){
@@ -109,6 +122,7 @@ export default {
       marketCapFilter: null,
       priceSensitive: null,
       startDate: null,
+      currentDateTime: DateTime.now().setZone('Australia/Sydney').toLocaleString(DateTime.DATETIME_MED),
       endDate: null,
       headers: [
         { text: "Ticker", value: 'ticker'},
@@ -118,8 +132,10 @@ export default {
         { text: "Announcement", value: 'announcement'},
         { text: "Price Sensitive", value: 'price_sensitive'},
         { text: "Announcement Time", value: 'announcement_time'},
+        { text: 'Time Difference', value: 'timeDifference'}
       ],
       announcements: [],
+      timeDifference: [],
       color: 'rgb(93, 197, 150)',
       size: '45px',
       margin: '2px',
@@ -131,12 +147,24 @@ export default {
   },
   created(){
     axios
-      .get('/api/contents')
+      // .get('/api/contents')
+      .get('http://0.0.0.0:1234/contents')
       .then(response => (
         this.full_data = response.data.items,
         this.announcements = this.full_data
         // console.log(response.data.items)
-      ))
+      ));
+    
+    // Calculate time differences
+    setInterval(() => {
+      const currentTime = new Date();
+      this.timeDifference = this.announcements.map(announcement => {
+        const announcementTime = new Date(announcement.announcement_time);
+        const differenceInMillis = announcementTime - currentTime;
+        const differenceInMinutes = differenceInMillis / (1000 * 60);
+        return differenceInMinutes.toFixed(2); // Limit to two decimal places
+      });
+    }, 60000); // Update every minute
   },
   computed: {
     filteredAnnouncements() {
@@ -167,6 +195,13 @@ export default {
     }
   },
   methods: {
+    isWithin5Minutes(announcementTime) {
+      const announcementDateTime = new Date(announcementTime);
+      const currentTime = DateTime.now().setZone('Australia/Sydney')
+      const timeDifference = announcementDateTime - currentTime;
+      const timeDifferenceInMinutes = timeDifference / (1000 * 60);
+      return Math.abs(timeDifferenceInMinutes) <= 5;
+    },
     formatDate(date){
       if (!date) return date
       const date_mod = date.replace("T", " ")
@@ -226,5 +261,8 @@ export default {
     margin: auto;
     /* background: #ffff; */
     /* box-shadow: 0px 0px 9px -2px #000; */
+  }
+  .highlighted-cell {
+    background-color: red; /* Set your desired highlight color */
   }
 </style>

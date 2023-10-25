@@ -14,6 +14,7 @@ cfg = Box(yaml.safe_load(open("config_db.yml")))
 ### set up logging and other params ----
 logger = logging.getLogger()
 
+
 # function to get data from hotcopper table
 def get_hotcopper():
     start = time.time()
@@ -77,14 +78,14 @@ def get_marketindex():
     df = (
         pl.from_pandas(pd.read_sql(query, postgresql_engine))
         .lazy()
-        .with_column(pl.col("market_cap").str.replace(r"\$", "").alias("market_cap"))
+        .with_columns(pl.col("market_cap").str.replace(r"\$", "").alias("market_cap"))
         .with_columns(
             pl.col("market_cap").str.extract(r"(\d+(\.\d+)?)").alias("market_cap_num"),
             pl.col("market_cap")
             .str.replace(r"(\d+(\.\d+)?)", "")
             .alias("market_cap_unit"),
         )
-        .with_column(
+        .with_columns(
             pl.when(pl.col("market_cap_unit") == "B")
             .then(pl.col("market_cap_num").cast(pl.Float64) * 1000000000)
             .otherwise(

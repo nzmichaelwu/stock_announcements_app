@@ -13,7 +13,8 @@ from box import Box
 from database import get_afr, get_aus, get_hotcopper, get_marketindex
 from flask import Flask, jsonify, request
 from flask_cors import CORS
-from forecast import do_forecast
+
+# from forecast import do_forecast
 from utils.logging import set_up_logging
 from utils.util import get_mem
 
@@ -76,6 +77,28 @@ def load_announcements_data() -> dict:
         )
     )
 
+    df_table_pd = df_table.to_pandas()
+
+    # fix the announcement_time column
+    df_table_pd["format"] = 1
+    df_table_pd.loc[df_table_pd.announcement_time.str.contains("/"), "format"] = 2
+
+    df_table_pd.loc[df_table_pd.format == 1, "announcement_time"] = pd.to_datetime(
+        df_table_pd.loc[df_table_pd.format == 1, "announcement_time"],
+        format="%Y-%m-%d %H:%M",
+    )
+
+    df_table_pd.loc[df_table_pd.format == 2, "announcement_time"] = pd.to_datetime(
+        df_table_pd.loc[df_table_pd.format == 2, "announcement_time"],
+        format="%Y-%m-%d %H/%M",
+    )
+
+    df_table_pd["announcement_time"] = pd.to_datetime(
+        df_table_pd["announcement_time"], format="%Y-%m-%d %H:%M"
+    )
+
+    df_table_pd = df_table_pd.drop(columns=["format"], axis=1)
+
     df_table_dict = df_table.to_pandas().to_dict(
         "records"
     )  # convert the pandas df into a list of dict
@@ -132,7 +155,8 @@ def load_news_data() -> dict:
 
 ### Route stuff ----
 # display announcements table
-@app.route("/api/contents", methods=["GET"])
+# @app.route("/api/contents", methods=["GET"])
+@app.route("/contents", methods=["GET"])
 async def announcements_data():
     return jsonify(items=load_announcements_data(), status=200)
 
@@ -144,26 +168,26 @@ async def news_data():
 
 
 # get stock ticker
-@app.route("/api/contents/forecast", methods=["POST"])
-async def process_ticker():
-    global ticker
+# @app.route("/api/contents/forecast", methods=["POST"])
+# async def process_ticker():
+#     global ticker
 
-    try:
-        ticker = request.json["ticker"]
-        logger.info(f"ticker processed successfully, ticker is {ticker}.")
-        return "Ticker code processed successfully"
-    except KeyError:
-        return {"error": "Ticker code not provided"}, 400
+#     try:
+#         ticker = request.json["ticker"]
+#         logger.info(f"ticker processed successfully, ticker is {ticker}.")
+#         return "Ticker code processed successfully"
+#     except KeyError:
+#         return {"error": "Ticker code not provided"}, 400
 
 
-@app.route("/api/contents/forecast", methods=["GET"])
-async def run_forecast():
-    global ticker
+# @app.route("/api/contents/forecast", methods=["GET"])
+# async def run_forecast():
+#     global ticker
 
-    if ticker:
-        return jsonify(items=do_forecast(ticker), status=200)
-    else:
-        return "No ticker code provided!"
+#     if ticker:
+#         return jsonify(items=do_forecast(ticker), status=200)
+#     else:
+#         return "No ticker code provided!"
 
 
 if __name__ == "__main__":
